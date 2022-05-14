@@ -22,8 +22,6 @@ contract RideShare{
     struct Rider{
         address riderAddr;
         uint256 phoneNumber;
-        Coordinates pickup;
-        Coordinates dropoff;
     }   
 
     struct Ride{
@@ -59,7 +57,7 @@ contract RideShare{
     uint256 [] public registeredDriverList;
 
     constructor(){
-
+        owner = msg.sender;
     }
 
 
@@ -80,7 +78,16 @@ contract RideShare{
         if (Registered[vehicle][license] == true){
             drivers[_addr].isApproved = true;
         }
-    
+    }
+
+    function joinAsRider(uint256 phoneNumber) public{
+        require(!isRider[msg.sender],"Already Registered");
+        address _addr = msg.sender;
+        riders[_addr].riderAddr = _addr;
+        riders[_addr].phoneNumber = phoneNumber;
+
+        isRider[_addr] = true;
+        riderslist.push(_addr);
     }
 
     //Register the doctor by certain authority
