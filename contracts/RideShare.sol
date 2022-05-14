@@ -56,7 +56,7 @@ contract RideShare{
 
 
     mapping(uint256=>mapping(uint256=>bool)) Registered;
-    uint256 [] public registeredDoctorList;
+    uint256 [] public registeredDriverList;
 
     constructor(){
 
@@ -87,7 +87,7 @@ contract RideShare{
     function registerDriver(uint256 vehicle, uint256 license) public {
         require(msg.sender==owner,"You are not allowed to register doctor!");
         Registered[vehicle][license] = true;
-        registeredDoctorList.push(license);
+        registeredDriverList.push(license);
     
     }
 
@@ -150,10 +150,5 @@ contract RideShare{
         RideReq[rideId].paid = true;
     
     }
-    }
-
-    
-
-
-    
+    }   
 }
