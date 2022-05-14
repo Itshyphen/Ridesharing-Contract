@@ -58,6 +58,9 @@ contract RideShare{
     mapping(uint256=>mapping(uint256=>bool)) Registered;
     uint256 [] public registeredDoctorList;
 
+    constructor(){
+
+    }
 
 
     function addDriver(uint256 vehicle, uint256 license, uint256 phone) public {
