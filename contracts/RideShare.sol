@@ -27,6 +27,7 @@ contract RideShare{
     }   
 
     struct Ride{
+        uint256 rideId;
         address riderAddr;
         address driverAddr;
         Coordinates pickup;
@@ -35,17 +36,11 @@ contract RideShare{
         uint256 fare;
         uint256 arrivalTime;
         bool driverArrived;
+        bool customerPicked;
         bool inProgress;
         bool paid;
     }
-    
-    struct RideStatus{
-        mapping(address=>address) pairing;//pairing[rider]=driver
-        uint256 arrivalTime;
-        bool driverArrived;
-        bool inProgress;
-        bool paid;
-    }
+
        
 
     address[] public driverList;
@@ -97,12 +92,14 @@ contract RideShare{
         require(isRider[msg.sender],"Register before using");
 
         Ride memory rides;
+        rides.rideId = RideReq.length;
         rides.riderAddr = msg.sender;
         rides.driverAddr = address(0);
         rides.pickup = Coordinates({lat: pick[0], long: pick[1]});
         rides.dropoff = Coordinates({lat: drop[0], long: drop[1]});
         rides.fare = price;
         rides.arrivalTime = 0;
+        rides.customerPicked = false;
         rides.driverArrived = false;
         rides.inProgress = false;
         rides.paid = false;
@@ -120,11 +117,40 @@ contract RideShare{
         }
     }
 
-    function selectRider(uint riderNumber, uint arrivalTime) public{
+    function selectRider(uint256 rideId, uint256 arrivalTime) public{
+        require(isDriver[msg.sender], " Only Driver has the authority");
+        require(RideReq[rideId].driverAddr == address(0), "driver currently paired");
 
+        RideReq[rideId].driverAddr = msg.sender;
+        RideReq[rideId].arrivalTime = arrivalTime;
+        RideReq[rideId].driverArrived = false;
     }
 
- 
+    function getDriverDetails(address driverAddr) public view returns(driver memory details){
+        return drivers[driverAddr];
+    }
+
+    //function of driver arrival and customer picked which changes inProgress to true
+
+    function payDriver(uint256 rideId) public payable{
+        // rider pays driver fixed amount for amount of trip complete
+        require(RideReq[rideId].driverAddr != address(0), "Rider needs to have an assigned driver to pay");
+        require(!RideReq[rideId].paid , "Hasn't paid earlier");
+        require(msg.value >= RideReq[rideId].fare,"Insufficient eth");
+       
+        payable(RideReq[rideId].driverAddr).transfer(msg.value);
+        
+         //return excess fee sent 
+        if (RideReq[rideId].fare < msg.value){
+            payable(msg.sender).transfer(msg.value-RideReq[rideId].fare);
+       
+        RideReq[rideId].paid = true;
+    
+    }
+    }
+
+    
+
 
     
 }
