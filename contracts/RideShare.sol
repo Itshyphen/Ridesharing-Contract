@@ -39,8 +39,6 @@ contract RideShare{
         bool paid;
     }
 
-       
-
     address[] public driverList;
     address[] public riderslist;
 
