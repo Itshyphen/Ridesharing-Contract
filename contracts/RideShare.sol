@@ -1,7 +1,12 @@
 // SPDX-License-Identifier: Unlicense
+
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Capped.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
 pragma solidity >=0.8.4;
 
-contract RideShare{
+
+contract RideShare is ERC20{
     
     // Used to store Coordinates of a location
     struct Coordinates{
@@ -24,7 +29,7 @@ contract RideShare{
         uint256 phoneNumber;
     }   
 
-    struct Ride{
+    struct Rides{
         uint256 rideId;
         address riderAddr;
         address driverAddr;
@@ -42,8 +47,11 @@ contract RideShare{
     address[] public driverList;
     address[] public riderslist;
 
-    Ride[] public RideReq;
+    Rides[] public RideReq;
     address public  owner;
+
+    uint256 cap = 1000000000 * 10**18;
+
 
     mapping(address=>driver) drivers;
     mapping(address=>Rider) riders;
@@ -54,8 +62,22 @@ contract RideShare{
     mapping(uint256=>mapping(uint256=>bool)) Registered;
     uint256 [] public registeredDriverList;
 
-    constructor(){
+    constructor ()
+        ERC20("RideSharing", "RIDE")
+    {
         owner = msg.sender;
+    }
+
+    function mint(address account) public payable {
+        require(msg.value>0,"Provide eth to get RIDE Tokens");
+
+        uint256 amount = msg.value*223100;
+        _mint(account, amount);
+    }
+
+    function _mint(address account, uint256 amount) internal virtual override {
+        require(super.totalSupply() + amount <= cap, "cap exceeded");
+        super._mint(account, amount);
     }
 
 
@@ -96,16 +118,17 @@ contract RideShare{
     
     }
 
-    function requestRide(int256[] memory pick, int256[] memory drop, uint256 price) public {
+    function requestRide(int256[] memory pick, int256[] memory drop, uint256 amount) public {
         require(isRider[msg.sender],"Register before using");
 
-        Ride memory rides;
+        transfer(address(this),amount);
+        Rides memory rides;
         rides.rideId = RideReq.length;
         rides.riderAddr = msg.sender;
         rides.driverAddr = address(0);
         rides.pickup = Coordinates({lat: pick[0], long: pick[1]});
         rides.dropoff = Coordinates({lat: drop[0], long: drop[1]});
-        rides.fare = price;
+        rides.fare = amount;
         rides.arrivalTime = 0;
         rides.customerPicked = false;
         rides.driverArrived = false;
@@ -115,6 +138,7 @@ contract RideShare{
         RideReq.push(rides);     
 
     }
+
 
     function getWaitingRiders() public view returns(Rider memory riderdetails, Coordinates memory pick, Coordinates memory drop, uint256 price) {
     // returns list of waiting riders to a driver
@@ -138,22 +162,15 @@ contract RideShare{
         return drivers[driverAddr];
     }
 
-    //function of driver arrival and customer picked which changes inProgress to true
-
-    function payDriver(uint256 rideId) public payable{
+    function payDriver(uint256 rideId) public {
         // rider pays driver fixed amount for amount of trip complete
         require(RideReq[rideId].driverAddr != address(0), "Rider needs to have an assigned driver to pay");
         require(!RideReq[rideId].paid , "Hasn't paid earlier");
-        require(msg.value >= RideReq[rideId].fare,"Insufficient eth");
-       
-        payable(RideReq[rideId].driverAddr).transfer(msg.value);
-        
-         //return excess fee sent 
-        if (RideReq[rideId].fare < msg.value){
-            payable(msg.sender).transfer(msg.value-RideReq[rideId].fare);
-       
+        IERC20 token = IERC20(address(this));
+        uint256 amount = RideReq[rideId].fare;
+        uint256 erc20balance = token.balanceOf(address(this));
+        require(amount <= erc20balance, "balance is low");
+        token.transfer(RideReq[rideId].driverAddr, amount);
         RideReq[rideId].paid = true;
-    
-    }
     }   
 }
